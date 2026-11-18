@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
 <style>
+[hidden]{display:none!important}
 /* Layout: settings rail on the left (desktop) / collapsible panel (phone); one 単語カード stage. 授業モード = card fills the screen */
 :root{
   --bg:#E6EBED; --panel:#F4F7F8; --ink:#1C2428; --muted:#56646B; --line:#C9D3D7;
@@ -206,6 +207,7 @@ body.present .exit-btn,body.present .side-btn{display:inline-block;font-size:max
 /* 横長のモニターでもカードが伸びすぎないよう、幅は高さの約1.65倍まで */
 body.present .stage,body.present .progress,body.present .actions{max-width:min(100%, 119vh);margin-inline:auto}
 body.present .card{height:72vh}
+@media (max-height:820px){body.present .wrap{padding-block:.5vh;row-gap:.4vh}}
 body.present .face{padding:8vh 3vw 6vh;border-top-width:1.2vh;border-radius:1.4vh}
 body.present .hole{width:2.4vh;height:2.4vh;top:2.2vh;left:2vw}
 body.present .task{font-size:4.6vh;top:1.6vh;right:2.4vw}
