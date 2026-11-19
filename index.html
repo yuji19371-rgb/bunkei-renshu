@@ -5421,6 +5421,19 @@ const BK_YOMI = [['使役受身','しえきうけみ'],['受身','うけみ'],['
   ['人','ひと'],['方向','ほうこう'],['所属','しょぞく'],['所有','しょゆう'],['位置','いち'],['理由','りゆう'],['原因','げんいん'],['目的','もくてき'],['変化','へんか'],['状況','じょうきょう'],['能力','のうりょく'],['自然','しぜん'],['逆接','ぎゃくせつ'],['依頼','いらい'],['推量','すいりょう']];
 const bkYomi = t => BK_YOMI.reduce((a, [k, v]) => a.split(k).join(v), bkKana(t));
 const BK_FIND = BUNKEI.map(e => [bkNorm(bkKanji(e.pat)), bkNorm(bkKana(e.pat)) + '\u0001' + bkNorm(bkYomi(e.pat)), e.ls.map(([l, p]) => 'l' + l + '-' + p).join(' ')]);
+const BK_YOMI2 = [['動詞','どうし'],['副詞','ふくし'],['尊敬','そんけい'],['謙譲','けんじょう'],['否定','ひてい'],['過去','かこ'],['伝聞','でんぶん'],['様子','ようす'],['変化','へんか'],['丁寧','ていねい'],['普通','ふつう'],['名詞','めいし']];
+const bkYomiAll = t => BK_YOMI2.reduce((a, [k, v]) => a.split(k).join(v), bkYomi(t));
+const BK_CFIND = [];
+Object.entries(TEXT_CONJ).forEach(([key, ks]) => ks.forEach(k => {
+  const [cat, f] = k.split(':'), name = CAT_SHORT[cat] + '・' + label(cat, f), plain = name.replace(/<[^>]*>/g, '');
+  const full = {verb:'動詞', iadj:'い形容詞', naadj:'な形容詞', noun:'名詞'}[cat];
+  BK_CFIND.push({key, k, name, find:[bkNorm(plain + full), bkNorm(bkYomiAll(plain + full))]});
+}));
+function bkCSearch(q){
+  const n = bkNorm(q); if (!n) return [];
+  return BK_CFIND.filter(x => x.find.some(t => t.includes(n)) || ('l' + x.key).startsWith(n + '-') || 'l' + x.key === n)
+    .sort((a, b) => { const [la, pa] = a.key.split('-').map(Number), [lb, pb] = b.key.split('-').map(Number); return la - lb || pa - pb; });
+}
 function bkSearch(q){
   const n = bkNorm(q); if (!n) return [];
   return BUNKEI.filter((e, i) => BK_FIND[i][0].includes(n) || BK_FIND[i][1].includes(n) || BK_FIND[i][2].split(' ').some(x => x === n || x.startsWith(n + '-')));
@@ -5470,9 +5483,22 @@ function renderBk(){
       }
     }
   }
-  $('bkFindBox').hidden = conj;
   $('bkFindClear').hidden = !bkQ;
-  if (!conj && bkNorm(bkQ)){
+  $('bkFind').placeholder = conj ? '活用をさがす（例：て形、うけみ）' : '文型をさがす（例：ても、受身）';
+  if (conj && bkNorm(bkQ)){
+    const hits = bkCSearch(bkQ), nk = new Set(hits.map(x => x.k)).size;
+    h = `<p class="nav-note">「${escH(bkQ)}」の活用：${nk}件。押すと その活用を練習します。</p>` + (hits.length
+      ? (() => {   // 同じ活用はまとめて1行に（どの課で出てくるかを下に並べる）
+          const g = new Map();
+          hits.forEach(x => { if (!g.has(x.k)) g.set(x.k, []); g.get(x.k).push(x); });
+          return [...g.values()].map(xs => {
+            const where = xs.length > 4 ? `L${xs[0].key} で はじめて出てきます（ほか ${xs.length - 1}か所）` : xs.map(x => 'L' + x.key).join('、');
+            return `<button type="button" class="row hit" data-chit="${xs[0].key}:${xs[0].k}"><span class="ttl">${xs[0].name}</span><span class="go"></span><span class="in">${where}${xs.length > 1 && xs.length <= 4 ? ' で出てきます' : ''}</span></button>`;
+          }).join('');
+        })()
+      : `<p class="none">見つかりません。ことばを短くするか、ひらがなで入れてみてください。</p>`);
+  }
+  else if (!conj && bkNorm(bkQ)){
     const hits = bkSearch(bkQ);
     h = `<p class="nav-note">「${escH(bkQ)}」の文型：${hits.length}件。押すと その文型を練習します。</p>` + (hits.length
       ? hits.slice(0, 80).map(e => e.ls.map(([L, p]) =>
@@ -5932,6 +5958,12 @@ $('bkFindClear').addEventListener('click', () => { bkQ = ''; $('bkFind').value =
 $('bkNav').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   const b = S.bk, d = t.dataset, conj = b.content === 'conj';
+  if (d.chit){   // 活用の検索結果：その課・パートに入り、この活用だけを練習する
+    const [key, ...rest] = d.chit.split(':'), [L, p] = key.split('-').map(Number);
+    b.lesson = L; b.part = p; b.nav = 'part'; b.book = L <= 15 ? 1 : 2;
+    bkApply(); bkUnselectPart(L, p); b.fOff = b.fOff.filter(k => k !== d.chit);
+    bkQ = ''; $('bkFind').value = ''; bkChange(); return;
+  }
   if (d.hit){   // 検索結果：その課・パートに入り、この文型だけを練習する
     b.lesson = +d.hl; b.part = +d.hp; b.nav = 'part'; b.book = b.lesson <= 15 ? 1 : 2;
     bkApply(); bkUnselectPart(b.lesson, b.part); b.xOff = b.xOff.filter(i => i !== +d.hit);
