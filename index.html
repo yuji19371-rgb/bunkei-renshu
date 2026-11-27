@@ -441,7 +441,7 @@ body.present .face.front.bk>.word.sent{font-size:min(12vh, calc(86cqi / var(--le
         <button type="button" data-m="cue">文作り</button>
       </div>
       <p class="modehelp" id="bkModeHelp"></p>
-      <label class="tog" id="bkHintTog"><input type="checkbox" id="bkHint"> 穴あきの表面に文型を出す</label>
+      <label class="tog" id="bkHintTog"><input type="checkbox" id="bkHint"> 表に文型を出さない（ヒントなし）</label>
     </section>
     <section data-tab="pick" id="kModeSec">
       <h2>練習の形</h2>
@@ -5195,7 +5195,7 @@ function buildBunkei(S, only){
       else { noMode = true; continue; }
     }
     else if (b.mode === 'pat'){ c.front = pat; c.front.noSpeak = true; c.sub = bkPair(cue0, 'sen'); c.how = '文型[ぶんけい]と ことばで 文[ぶん]を 作[つく]りましょう'; }
-    else if (b.mode === 'cloze'){ c.front = bkPair(sen0, 'cloze'); c.fLead = pat; c.how = '＿＿に 入[はい]る ことばは？'; }
+    else if (b.mode === 'cloze'){ c.front = bkPair(sen0, 'cloze'); c.fLead = b.noHint ? null : pat; if (b.noHint) c.fTag = false; c.how = '＿＿に 入[はい]る ことばは？'; }
     else { c.front = bkPair(cue0, 'sen'); c.front.noSpeak = true; c.fLead = pat; c.how = 'この ことばで 文[ぶん]を 作[つく]りましょう'; }
     out.push(c);
     }
@@ -5361,7 +5361,7 @@ function render(pair){
   return {html, len:[...k].length + extra};
 }
 function setWord(el, pair){
-  const x = render(pair); el.innerHTML = x.html.replace(/<span class="rw"><span>\u0002<\/span><\/span>\s?/g, '<br>');
+  const x = render(pair); el.innerHTML = x.html.replace(/<span class="rw"><span>\u0002<\/span><\/span>\s?/g, '<br>').replace(/\s?<span class="rw"><\/span><wbr><span class="rw"><\/span>\s?/g, '<br>');
   el.classList.toggle('sent', !!x.sent);
   // 文は 12字を超えたら2行、30字を超えたら3行に分けるつもりで文字の大きさを決める
   const lines = !x.sent || x.len <= 12 ? 1 : x.len <= 30 ? 2 : 3;
@@ -5450,7 +5450,7 @@ function renderBk(){
   document.querySelectorAll('#bkContent button').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === b.content));
   document.querySelectorAll('#bkMode button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === b.mode));
   $('bkModeHelp').textContent = BK_HELP[b.mode] || '';
-  $('bkHint').checked = b.hint; $('bkHintTog').hidden = true;
+  $('bkHint').checked = !!b.noHint; $('bkHintTog').hidden = b.content === 'conj' || b.mode !== 'cloze';
   const itemsOf = key => conj ? (TEXT_CONJ[key] || []) : (BK_PART_PATS[key] || []);
   const lcount = L => new Set((BK_LESSON_PARTS[L] || []).flatMap(p => itemsOf(L + '-' + p))).size;
   const bookName = k => k === 1 ? '初級1' : '初級2';
@@ -5950,7 +5950,7 @@ $('kMode').addEventListener('click', e => { const b = e.target.closest('button')
 $('modebar').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.mode; bkChange(); });
 $('bkContent').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bk.content = b.dataset.c; bkChange(); });
 $('bkMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.bk.mode = b.dataset.m; bkChange(); });
-$('bkHint').addEventListener('change', e => { S.bk.hint = e.target.checked; bkChange(); });
+$('bkHint').addEventListener('change', e => { S.bk.noHint = e.target.checked; bkChange(); });
 const toggleIn = (arr, v) => arr.includes(v) ? arr.filter(x => x !== v) : arr.concat(v);
 $('bkFind').addEventListener('input', e => { bkQ = e.target.value; renderBk(); });
 $('bkFind').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape'){ bkQ = ''; e.target.value = ''; renderBk(); } });
